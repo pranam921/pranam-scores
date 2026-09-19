@@ -1,0 +1,45 @@
+name: Update fulfillment scores
+
+on:
+  schedule:
+    # 11:00 UTC ≈ 6/7am ET — after the previous night's score is filled in.
+    # GitHub's cron can lag by several minutes under load; that's fine here.
+    - cron: "0 11 * * *"
+  workflow_dispatch: # lets you trigger a run by hand from the Actions tab
+
+permissions:
+  contents: write # required for the job to push the refreshed JSON back
+
+concurrency:
+  group: update-scores
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Rebuild scores.json from the sheet
+        env:
+          # Set this repo secret to the "Publish to web" CSV URL of the
+          # two-column feed tab. Without it the script falls back to the gviz
+          # URL, which only works while the document is link-readable.
+          SCORES_CSV_URL: ${{ secrets.SCORES_CSV_URL }}
+        run: node scripts/build-scores.mjs
+
+      - name: Commit if the scores changed
+        run: |
+          if git diff --quiet -- scores.json; then
+            echo "No change today — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "scores-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scores.json
+          git commit -m "Update fulfillment scores through $(date -u +%Y-%m-%d)"
+          git push

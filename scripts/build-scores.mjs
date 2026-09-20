@@ -18,8 +18,17 @@
 import { writeFile, readFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-const SHEET_ID = process.env.SHEET_ID ?? "1eGDFvkE8t7qI44kOr91k-0XyHj0g7o7k7Q1enokXgiw";
-const SHEET_GID = process.env.SHEET_GID ?? "495611238";
+/**
+ * An unset GitHub Actions secret arrives as an empty string rather than as an
+ * absent variable, so `??` would happily hand fetch() "". Treat blank as unset.
+ */
+const env = (name) => {
+  const v = process.env[name];
+  return v && v.trim() ? v.trim() : undefined;
+};
+
+const SHEET_ID = env("SHEET_ID") ?? "1eGDFvkE8t7qI44kOr91k-0XyHj0g7o7k7Q1enokXgiw";
+const SHEET_GID = env("SHEET_GID") ?? "495611238";
 const OUT = resolve(process.cwd(), "scores.json");
 
 // Refuse to publish a file that lost a big chunk of history — a permissions
@@ -31,7 +40,7 @@ const MIN_ROWS = 3000;
 // value that is really 56.25%. Multiplying drops the display format and returns
 // the underlying number.
 const url =
-  process.env.SCORES_CSV_URL ??
+  env("SCORES_CSV_URL") ??
   `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
     `?tqx=out:csv&gid=${SHEET_GID}&tq=${encodeURIComponent("select A, AG * 1")}`;
 

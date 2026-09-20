@@ -88,7 +88,15 @@ function parseDate(raw) {
   return d.toISOString().slice(0, 10);
 }
 
-const res = await fetch(url, { redirect: "follow" });
+// Google's publish endpoint serves per-node cached copies and will happily hand
+// back yesterday's export — which is how a stale 2dp copy slipped through once.
+// A unique query param plus no-cache forces a fresh read every run.
+const fresh = `${url}${url.includes("?") ? "&" : "?"}_cb=${Date.now()}`;
+
+const res = await fetch(fresh, {
+  redirect: "follow",
+  headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+});
 if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status} ${res.statusText}`);
 const csv = await res.text();
 

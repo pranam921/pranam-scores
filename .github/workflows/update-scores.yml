@@ -2,9 +2,15 @@ name: Update fulfillment scores
 
 on:
   schedule:
-    # 11:00 UTC ≈ 6/7am ET — after the previous night's score is filled in.
-    # GitHub's cron can lag by several minutes under load; that's fine here.
-    - cron: "0 11 * * *"
+    # Three slots, not one. GitHub's scheduled runs are best-effort: the 11:00
+    # slot fired at 16:52 on 2026-09-21 and had not fired by 11:52 the next
+    # day, and runs can be dropped altogether under load. Each extra attempt is
+    # free and silent — the script compares bytes and exits without committing
+    # when the sheet has not moved — so a late or missed slot is picked up the
+    # same day instead of leaving the site a day behind.
+    - cron: "0 11 * * *" # ~6/7am ET
+    - cron: "0 15 * * *" # ~10/11am ET
+    - cron: "0 19 * * *" # ~2/3pm ET
   workflow_dispatch: # lets you trigger a run by hand from the Actions tab
 
 permissions:
